@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Good Morning, Andy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=Caveat:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --dusk-1:#211a30; --dusk-2:#372a4d; --rose:#e2a79c; --plum:#6c4f74;
+    --gold:#f2c179; --cream:#fbf3e6; --ink:#241c2f;
+  }
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  html,body{ background:var(--dusk-1); }
+  body{
+    min-height:100vh;
+    font-family:'Inter', sans-serif;
+    color:var(--cream);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+
+  #backdrop{ position:fixed; inset:0; z-index:-3; }
+  .bg{ position:absolute; inset:0; opacity:0; transition:opacity 2.2s ease; }
+  .bg.is-on{ opacity:1; }
+  .bg-1{ background:radial-gradient(120% 90% at 50% 110%, var(--dusk-2), var(--dusk-1) 70%); }
+  .bg-2{ background:radial-gradient(120% 90% at 50% 115%, #3a2b4c, #211a30 70%); }
+  .bg-3{ background:radial-gradient(120% 95% at 50% 115%, #55385a, #241c33 70%); }
+  .bg-4{ background:radial-gradient(120% 100% at 50% 115%, #6f4763, #2a1f38 70%); }
+  .bg-5{ background:radial-gradient(120% 105% at 50% 115%, #9c6470, #33253d 70%); }
+  .bg-6{ background:radial-gradient(120% 110% at 50% 115%, #d99b7c, #3c2b3f 65%); }
+  .bg-7{ background:radial-gradient(130% 115% at 50% 115%, var(--gold), #4a2f3a 60%); }
+
+  #sun{
+    position:fixed; left:50%; width:min(46vw,320px); height:min(46vw,320px);
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff6df, var(--gold) 60%, #e79a5c 100%);
+    transform:translate(-50%, 62vh);
+    box-shadow:0 0 30px 6px rgba(242,193,121,0.08);
+    transition:transform 2.4s cubic-bezier(.22,.9,.3,1), box-shadow 2.4s ease;
+    z-index:-2; opacity:0.85;
+  }
+  body[data-stage="1"] #sun{ transform:translate(-50%, 62vh); }
+  body[data-stage="2"] #sun{ transform:translate(-50%, 55vh); }
+  body[data-stage="3"] #sun{ transform:translate(-50%, 45vh); }
+  body[data-stage="4"] #sun{ transform:translate(-50%, 33vh); }
+  body[data-stage="5"] #sun{ transform:translate(-50%, 19vh); box-shadow:0 0 60px 20px rgba(242,193,121,0.25); }
+  body[data-stage="6"] #sun{ transform:translate(-50%, 6vh); box-shadow:0 0 90px 30px rgba(242,193,121,0.35); }
+  body[data-stage="7"] #sun{ transform:translate(-50%, -6vh); box-shadow:0 0 140px 50px rgba(242,193,121,0.45); }
+
+  #clouds{ position:fixed; inset:0; z-index:-1; overflow:hidden; transition:opacity 2s ease; }
+  .cloud{ position:absolute; border-radius:50%; filter:blur(30px); background:rgba(20,15,28,0.55); }
+  .c1{ width:340px; height:110px; top:14%; left:-10%; animation:drift1 50s linear infinite; }
+  .c2{ width:260px; height:90px;  top:26%; left:60%; animation:drift2 64s linear infinite; }
+  .c3{ width:200px; height:80px;  top:9%;  left:35%; animation:drift1 74s linear infinite reverse; }
+  @keyframes drift1{ from{transform:translateX(0);} to{transform:translateX(120vw);} }
+  @keyframes drift2{ from{transform:translateX(0);} to{transform:translateX(-120vw);} }
+  body[data-stage="1"] #clouds, body[data-stage="2"] #clouds{ opacity:0.9; }
+  body[data-stage="3"] #clouds{ opacity:0.6; }
+  body[data-stage="4"] #clouds{ opacity:0.35; }
+  body[data-stage="5"] #clouds{ opacity:0.15; }
+  body[data-stage="6"] #clouds, body[data-stage="7"] #clouds{ opacity:0; }
+
+  /* ---------- start gate ---------- */
+  #gate{
+    position:fixed; inset:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--dusk-1);
+    transition:opacity 1s ease, visibility 1s ease;
+    text-align:center; padding:2rem;
+  }
+  #gate.is-hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  #gate h1{
+    font-family:'Fraunces', serif; font-style:italic; font-weight:500;
+    font-size:clamp(2.2rem,7vw,3.6rem); margin-bottom:1.2rem;
+  }
+  #gate p{ color:rgba(251,243,230,0.6); font-size:0.95rem; margin-bottom:1.6rem; max-width:360px; }
+  #startBtn{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:1rem;
+    padding:0.95rem 2.1rem; border-radius:100px; border:1px solid rgba(251,243,230,0.4);
+    background:transparent; color:var(--cream); cursor:pointer;
+    transition:background .25s ease, transform .25s ease, opacity .4s ease;
+  }
+  #startBtn:hover{ background:rgba(251,243,230,0.12); transform:translateY(-2px); }
+  #startBtn.hidden{ opacity:0; pointer-events:none; height:0; overflow:hidden; }
+
+  #gateGame{ position:relative; width:min(300px,78vw); height:170px; margin-bottom:1.6rem; }
+
+  .pop-target{
+    position:absolute; font-size:1.8rem; line-height:1; cursor:pointer;
+    user-select:none; -webkit-user-select:none;
+    animation:bob 2.4s ease-in-out infinite;
+    transition:transform .3s ease, opacity .3s ease;
+  }
+  .pop-target.popped{ transform:scale(1.7); opacity:0; }
+  @keyframes bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-9px); } }
+
+  #gamePanel{
+    position:fixed; inset:0; z-index:45;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(20,15,25,0.78);
+    opacity:0; pointer-events:none; transition:opacity .5s ease;
+    text-align:center; padding:2rem;
+  }
+  #gamePanel.is-on{ opacity:1; pointer-events:auto; }
+  .game-title{
+    font-family:'Fraunces', serif; font-style:italic; font-weight:500;
+    font-size:clamp(1.3rem,4.2vw,1.9rem); margin-bottom:1.2rem; max-width:420px;
+  }
+  #gameArea{
+    position:relative; width:min(360px,85vw); height:220px;
+    background:rgba(251,243,230,0.05); border:1px solid rgba(251,243,230,0.15);
+    border-radius:20px; margin-bottom:1rem;
+  }
+  .game-progress{ font-family:'Inter', sans-serif; font-size:0.85rem; color:rgba(251,243,230,0.6); }
+
+  /* ---------- letter ---------- */
+  #letter{
+    position:relative; z-index:1;
+    max-width:640px; margin:0 auto;
+    padding:22vh 7vw 40vh;
+  }
+  #letter p{
+    font-family:'Fraunces', serif; font-weight:400;
+    font-size:clamp(1.15rem, 2.8vw, 1.65rem);
+    line-height:1.6;
+    margin-bottom:2rem;
+    color:var(--cream);
+  }
+  #letter p:first-child{
+    font-style:italic; font-weight:500;
+    font-size:clamp(2rem, 6vw, 3.2rem);
+    margin-bottom:2.6rem;
+  }
+  .cursor{
+    display:inline-block; width:2px; height:1em; background:var(--gold);
+    margin-left:2px; vertical-align:-0.15em;
+    animation:blink 1s step-start infinite;
+  }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  #ask{
+    max-width:640px; margin:0 auto; padding:0 7vw 30vh;
+    text-align:center; opacity:0; transform:translateY(16px);
+    transition:opacity .9s ease, transform .9s ease;
+  }
+  #ask.is-visible{ opacity:1; transform:translateY(0); }
+  #ask h2{
+    font-family:'Fraunces', serif; font-style:italic; font-weight:500;
+    font-size:clamp(2.2rem, 7vw, 4rem); margin-bottom:1.4rem; color:var(--gold);
+  }
+  #ask .sub{ color:rgba(251,243,230,0.6); font-size:0.95rem; display:block; margin-bottom:1.8rem; }
+  .btn{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:1rem;
+    padding:0.95rem 2.1rem; border-radius:100px; border:none; cursor:pointer;
+    background:var(--gold); color:var(--ink);
+    box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    transition:transform .25s ease, box-shadow .25s ease;
+  }
+  .btn:hover{ transform:translateY(-2px); }
+  .signoff{
+    display:block; margin-top:2rem; font-family:'Caveat', cursive;
+    font-size:1.6rem; color:rgba(251,243,230,0.8);
+  }
+
+  #thanks{
+    position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(36,28,47,0); pointer-events:none; opacity:0;
+    transition:opacity .5s ease; z-index:40; text-align:center; padding:2rem;
+  }
+  #thanks.is-on{ opacity:1; pointer-events:auto; background:rgba(20,15,25,0.6); }
+  .plea-text{
+    font-family:'Fraunces', serif; font-style:italic;
+    font-size:clamp(1.5rem, 4.6vw, 2.3rem); color:var(--cream); max-width:520px;
+    margin:0 auto;
+  }
+  .plea-text.final{ color:var(--gold); font-size:clamp(1.9rem, 5.6vw, 2.9rem); }
+  .plea-text.shake{ animation:shake .4s ease; }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-7px); } 75%{ transform:translateX(7px); } }
+  .plea-btns{
+    display:flex; gap:0.8rem; justify-content:center; flex-wrap:wrap;
+    margin-top:1.8rem;
+  }
+  .btn-ghost{
+    background:transparent; border:1px solid rgba(251,243,230,0.4);
+    color:var(--cream); box-shadow:none;
+  }
+  .btn-ghost:hover{ background:rgba(251,243,230,0.14); }
+  .confetti{
+    position:absolute; top:-5%; width:8px; height:14px; border-radius:2px;
+    opacity:0.9; animation:fall linear forwards;
+  }
+  @keyframes fall{ to{ transform:translateY(105vh) rotate(360deg); opacity:0; } }
+
+  /* ---------- controls ---------- */
+  #controls{
+    position:fixed; bottom:4vh; right:5vw; z-index:20;
+    display:flex; gap:0.6rem;
+  }
+  .ctrl-btn{
+    width:42px; height:42px; border-radius:50%;
+    background:rgba(251,243,230,0.1); border:1px solid rgba(251,243,230,0.28);
+    color:var(--cream); cursor:pointer; font-size:1.05rem;
+    display:flex; align-items:center; justify-content:center;
+    transition:background .2s ease;
+  }
+  .ctrl-btn:hover{ background:rgba(251,243,230,0.2); }
+  .ctrl-btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+  /* ---------- particles + grain ---------- */
+  #particles{ position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden; }
+  .mote{
+    position:absolute; border-radius:50%;
+    background:var(--cream);
+    opacity:0.5;
+    animation:rise linear infinite;
+  }
+  body[data-stage="1"] .mote, body[data-stage="2"] .mote, body[data-stage="3"] .mote{ background:#dcd3ea; }
+  body[data-stage="5"] .mote, body[data-stage="6"] .mote, body[data-stage="7"] .mote{ background:var(--gold); }
+  @keyframes rise{
+    from{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:0.6; }
+    90%{ opacity:0.6; }
+    to{ transform:translateY(-100vh) translateX(20px); opacity:0; }
+  }
+
+  #grain{
+    position:fixed; inset:0; z-index:15; pointer-events:none;
+    opacity:0.05; mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .flourish{
+    display:block; margin:0 auto 2rem; width:34px; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(251,243,230,0.5), transparent);
+    opacity:0; transition:opacity 1.2s ease;
+  }
+  .flourish.is-on{ opacity:1; }
+
+  @media (prefers-reduced-motion: reduce){
+    .bg, #sun, #clouds, .confetti, #ask, .mote{ transition:opacity .3s ease !important; animation:none !important; }
+  }
+</style>
+</head>
+<body data-stage="1">
+
+  <div id="backdrop">
+    <div class="bg bg-1 is-on" data-bg="1"></div>
+    <div class="bg bg-2" data-bg="2"></div>
+    <div class="bg bg-3" data-bg="3"></div>
+    <div class="bg bg-4" data-bg="4"></div>
+    <div class="bg bg-5" data-bg="5"></div>
+    <div class="bg bg-6" data-bg="6"></div>
+    <div class="bg bg-7" data-bg="7"></div>
+  </div>
+  <div id="sun"></div>
+  <div id="clouds">
+    <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+  </div>
+  <div id="particles"></div>
+  <div id="grain"></div>
+
+  <div id="gate">
+    <h1>Good morning, Andy.</h1>
+    <p id="gateHint">pop the hearts to unlock your letter 💛</p>
+    <div id="gateGame"></div>
+    <button id="startBtn" class="hidden">Begin reading 🔈</button>
+  </div>
+
+  <div id="letter"></div>
+
+  <div id="ask">
+    <span class="eyebrow"></span>
+    <h2>Friends?</h2>
+    <span class="sub">no pressure — just, whenever you're ready.</span>
+    <button class="btn" id="friendsBtn">Yes, still friends 🤝</button>
+    <span class="signoff">— Tellah</span>
+  </div>
+
+  <div id="controls">
+    <button class="ctrl-btn" id="muteBtn" aria-label="Mute music">🔈</button>
+    <button class="ctrl-btn" id="skipBtn" aria-label="Skip ahead">⏭</button>
+  </div>
+
+  <div id="gamePanel">
+    <p class="game-title" id="gameTitle"></p>
+    <div id="gameArea"></div>
+    <p class="game-progress" id="gameProgress"></p>
+  </div>
+
+  <div id="thanks">
+    <div id="thanksInner"></div>
+  </div>
+
+<script>
+  /* ---------------- content ---------------- */
+  const paragraphs = [
+    "Good morning, Andy.",
+    "I'm sorry for what happened yesterday. I let my frustration get the better of me, and that wasn't fair to you, no matter what was going on with me.",
+    "I'd been feeling off for the past few days, and my period started last night, which is probably part of why I was on edge. But I want to be clear — that's context, not an excuse.",
+    "Losing my temper enough to throw the pagkaon at you was wrong. There's no version of yesterday where that was okay, and I take full responsibility for it. I am sincerely sorry.",
+    "However, I want you to understand that you've been insensitive yesterday too. Expressing gratefulness will never be bribery — only by thinking about it that way will make it one.",
+    "What's wrong with expressing your gratefulness? Whether they'll accept it or not, it depends on them. Atleast we have something to give, even if hinatag ra pud 'to, and that's just to show our gratefulness. There's nothing wrong with sharing your blessings, right?",
+    "Moreover, I never even asked you personally. What I never understood yesterday was your impulsiveness.",
+    "I was with Jamaica yesterday, where Cheina expressed that she's getting annoyed — because she's the only person I could easily reach out to. And that's because I don't want to force you, or our other members, to help me, even if you're not willing to.",
+    "You're a great friend to me, and I don't want to sever our friendship over a petty misunderstanding. I hope you'll have the heart to reflect over everything I've mentioned today too. I believe that you have a good heart.",
+    "To further express my sincere apology, I made this website specifically for you. Do you like it? Once again, I am sorry."
+  ];
+
+  const particlesEl = document.getElementById('particles');
+  (function seedParticles(){
+    const count = 22;
+    for(let i=0;i<count;i++){
+      const m = document.createElement('div');
+      m.className = 'mote';
+      const size = 2 + Math.random()*3;
+      m.style.width = size + 'px';
+      m.style.height = size + 'px';
+      m.style.left = Math.random()*100 + 'vw';
+      m.style.bottom = '-5vh';
+      m.style.animationDuration = (18 + Math.random()*22) + 's';
+      m.style.animationDelay = (Math.random()*20) + 's';
+      particlesEl.appendChild(m);
+    }
+  })();
+
+  const letterEl = document.getElementById('letter');
+  const askEl = document.getElementById('ask');
+  const gateEl = document.getElementById('gate');
+  const startBtn = document.getElementById('startBtn');
+  const muteBtn = document.getElementById('muteBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const body = document.body;
+
+  const totalChars = paragraphs.reduce((n,p)=> n + p.length, 0);
+  let revealed = 0;
+  let muted = false;
+  let skipping = false;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function delayFor(ch){
+    if(skipping || reduceMotion) return 0;
+    if(ch === '.' || ch === '?') return 900;
+    if(ch === ',' || ch === '—') return 340;
+    return 52 + Math.random()*38;
+  }
+
+  function updateStage(){
+    const ratio = revealed / totalChars;
+    const stage = Math.min(7, Math.max(1, Math.ceil(ratio*7)));
+    body.setAttribute('data-stage', stage);
+  }
+
+  async function typeParagraph(text, isFirst){
+    const p = document.createElement('p');
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    letterEl.appendChild(p);
+    p.appendChild(cursor);
+
+    for(const ch of text){
+      const node = document.createTextNode(ch);
+      p.insertBefore(node, cursor);
+      revealed++;
+      updateStage();
+      if(revealed % 6 === 0){
+        cursor.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
+      if(!skipping && !reduceMotion) await wait(delayFor(ch));
+    }
+    cursor.remove();
+    if(reduceMotion || skipping) return;
+    await wait(text.endsWith('.') || text.endsWith('?') ? 1400 : 700);
+  }
+
+  function wait(ms){ return new Promise(r=> setTimeout(r, ms)); }
+
+  /* ---------------- pop games ---------------- */
+  const gamePanel = document.getElementById('gamePanel');
+  const gameTitle = document.getElementById('gameTitle');
+  const gameArea = document.getElementById('gameArea');
+  const gameProgress = document.getElementById('gameProgress');
+
+  function playPopGame(emoji, label, count){
+    if(reduceMotion) return Promise.resolve();
+    return new Promise(resolve=>{
+      gamePanel.classList.add('is-on');
+      gameTitle.textContent = label;
+      gameProgress.textContent = `0 / ${count}`;
+      gameArea.innerHTML = '';
+      let popped = 0;
+      for(let i=0;i<count;i++){
+        const t = document.createElement('span');
+        t.className = 'pop-target';
+        t.textContent = emoji;
+        t.style.left = (6 + Math.random()*80) + '%';
+        t.style.top = (8 + Math.random()*76) + '%';
+        t.style.animationDelay = (Math.random()*2) + 's';
+        t.addEventListener('click', ()=>{
+          if(t.classList.contains('popped')) return;
+          t.classList.add('popped');
+          popped++;
+          gameProgress.textContent = `${popped} / ${count}`;
+          setTimeout(()=> t.remove(), 300);
+          if(popped === count){
+            setTimeout(()=>{
+              gamePanel.classList.remove('is-on');
+              resolve();
+            }, 500);
+          }
+        });
+        gameArea.appendChild(t);
+      }
+    });
+  }
+
+  /* ---------------- gate unlock game ---------------- */
+  const gateGameEl = document.getElementById('gateGame');
+  const gateHintEl = document.getElementById('gateHint');
+  const GATE_COUNT = 5;
+  let gatePopped = 0;
+
+  function setupGateGame(){
+    if(reduceMotion){
+      gateGameEl.style.display = 'none';
+      gateHintEl.style.display = 'none';
+      startBtn.classList.remove('hidden');
+      return;
+    }
+    for(let i=0;i<GATE_COUNT;i++){
+      const t = document.createElement('span');
+      t.className = 'pop-target';
+      t.textContent = '💛';
+      t.style.left = (8 + Math.random()*76) + '%';
+      t.style.top = (8 + Math.random()*72) + '%';
+      t.style.animationDelay = (Math.random()*2) + 's';
+      t.addEventListener('click', ()=>{
+        if(t.classList.contains('popped')) return;
+        t.classList.add('popped');
+        gatePopped++;
+        gateHintEl.textContent = `${gatePopped} / ${GATE_COUNT} popped 💛`;
+        setTimeout(()=> t.remove(), 300);
+        if(gatePopped === GATE_COUNT){
+          setTimeout(()=>{
+            gateGameEl.style.display = 'none';
+            gateHintEl.style.display = 'none';
+            startBtn.classList.remove('hidden');
+          }, 400);
+        }
+      });
+      gateGameEl.appendChild(t);
+    }
+  }
+  setupGateGame();
+
+  async function runLetter(){
+    for(let i=0;i<=3;i++) await typeParagraph(paragraphs[i]);
+    await playPopGame('🎈', 'quick breather — pop the balloons! 🎈', 6);
+    for(let i=4;i<=7;i++) await typeParagraph(paragraphs[i]);
+    await playPopGame('⭐', 'catch some stars before we continue ⭐', 6);
+    for(let i=8;i<=9;i++) await typeParagraph(paragraphs[i]);
+    document.getElementById('letter').scrollIntoView({behavior:'smooth', block:'start'});
+    await wait(reduceMotion ? 0 : 400);
+    askEl.classList.add('is-visible');
+    askEl.scrollIntoView({ behavior:'smooth', block:'center' });
+  }
+
+  
